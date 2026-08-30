@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV–JD Match</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper: #f6f4ee;
+            --paper-raised: #fffdf9;
+            --ink: #1c2430;
+            --ink-soft: #5b6472;
+            --ink-faint: #8a8f98;
+            --line: #ddd6c5;
+            --line-strong: #c9c0a9;
+            --pine: #234f3d;
+            --pine-hover: #17392b;
+            --pine-tint: #e7efe9;
+            --brick: #8a3b32;
+            --brick-tint: #f5e9e6;
+            --gold: #96702f;
+            --gold-tint: #f2ead9;
+            --font-display: "Source Serif 4", Georgia, serif;
+            --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--paper);
+            background-image:
+                linear-gradient(var(--line) 1px, transparent 1px);
+            background-size: 100% 32px;
+            background-attachment: local;
+            color: var(--ink);
+            margin: 0;
+            padding: 0 20px 48px;
+        }
+
+        .masthead {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 40px 4px 28px;
+            border-bottom: 2px solid var(--ink);
+        }
+
+        .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--pine);
+            margin: 0 0 6px;
+        }
+
+        .masthead h1 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 2.1rem;
+            margin: 0 0 6px;
+            letter-spacing: -0.01em;
+        }
+
+        .masthead p {
+            margin: 0;
+            color: var(--ink-soft);
+            font-size: 0.95rem;
+            max-width: 60ch;
+        }
+
+        .container {
+            max-width: 1180px;
+            margin: 32px auto 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--paper-raised);
+            border: 1px solid var(--line-strong);
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(28, 36, 48, 0.04);
+            padding: 28px;
+        }
+
+        .card.span-2 { grid-column: span 2; }
+        @media (max-width: 768px) {
+            .card.span-2 { grid-column: span 1; }
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin: 0 0 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .section-heading .num {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--ink-faint);
+        }
+
+        .section-heading h2 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        h3.subhead {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.78rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin: 0 0 10px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 600px) {
+            .field-row { grid-template-columns: 1fr; }
+        }
+
+        .input-group { margin-bottom: 18px; }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--ink);
+        }
+
+        textarea {
+            width: 100%;
+            height: 240px;
+            padding: 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            resize: vertical;
+            background: #fffefb;
+            color: var(--ink);
+        }
+
+        textarea:focus, select:focus, input:focus, button:focus-visible {
+            outline: 2px solid var(--pine);
+            outline-offset: 1px;
+        }
+
+        textarea::placeholder { color: var(--ink-faint); }
+
+        select, input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid var(--line-strong);
+            border-radius: 4px;
+            background: #fffefb;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            color: var(--ink);
+        }
+
+        .import-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .import-btn {
+            background: transparent;
+            color: var(--pine);
+            border: 1px solid var(--pine);
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .import-btn:hover { background: var(--pine); color: #fff; }
+
+        .btn {
+            background-color: var(--pine);
+            color: #fff;
+            border: none;
+            padding: 12px 22px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.15s;
+            letter-spacing: 0.01em;
+        }
+        .btn:hover:not(:disabled) { background-color: var(--pine-hover); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn.secondary { background: var(--ink); }
+        .btn.secondary:hover:not(:disabled) { background: #000; }
+
+        .copy-btn {
+            margin-top: 12px;
+            background: transparent;
+            border: 1px solid var(--line-strong);
+            color: var(--ink-soft);
+            padding: 7px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+        .result-box {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 16px;
+            margin-top: 4px;
+            max-height: 420px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: var(--font-mono);
+            font-size: 0.83rem;
+            line-height: 1.55;
+            color: var(--ink);
+        }
+        .result-box.empty { color: var(--ink-faint); font-style: italic; font-family: var(--font-body); }
+
+        /* --- Score seal --- */
+        .seal-wrap {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            padding: 18px 4px 26px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 20px;
+        }
+        .seal {
+            flex: 0 0 auto;
+            width: 92px;
+            height: 92px;
+            border-radius: 50%;
+            border: 3px solid var(--ink-faint);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--ink-faint);
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .seal.pine { border-color: var(--pine); color: var(--pine); }
+        .seal.gold { border-color: var(--gold); color: var(--gold); }
+        .seal.brick { border-color: var(--brick); color: var(--brick); }
+
+        .seal-copy .tier {
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0 0 2px;
+        }
+        .seal-copy .tier.pine { color: var(--pine); }
+        .seal-copy .tier.gold { color: var(--gold); }
+        .seal-copy .tier.brick { color: var(--brick); }
+        .seal-copy .label {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            margin: 0;
+        }
+
+        .pros-cons-table { width: 100%; border-collapse: collapse; }
+        .pros-cons-table th {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--line-strong);
+        }
+        .pros-cons-table td {
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+        .pros-cons-table tr:last-child td { border-bottom: none; }
+        .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .status-icon.pro { background: var(--pine-tint); color: var(--pine); }
+        .status-icon.con { background: var(--brick-tint); color: var(--brick); }
+        .placeholder-row td { color: var(--ink-faint); font-style: italic; }
+
+        .loading {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--ink-soft);
+        }
+        .spinner {
+            border: 3px solid var(--line);
+            border-left-color: var(--pine);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .settings-panel {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            padding: 18px 20px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .banner {
+            display: none;
+            margin-top: 12px;
+            padding: 11px 14px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border: 1px solid transparent;
+        }
+        .banner.show { display: block; }
+        .banner.error { background: var(--brick-tint); border-color: var(--brick); color: var(--brick); }
+        .banner.warn { background: var(--gold-tint); border-color: var(--gold); color: #6b4f1f; }
+
+        .hint {
+            font-size: 0.78rem;
+            color: var(--ink-faint);
+            margin-top: 6px;
+        }
+
+        footer.note {
+            max-width: 1180px;
+            margin: 28px auto 0;
+            font-size: 0.78rem;
+            color: var(--ink-faint);
+            padding: 0 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="masthead">
+    <p class="eyebrow">Candidate Assessment Tool</p>
+    <h1>CV–JD Match</h1>
+    <p>Compare a CV against a job description, get a structured fit assessment, and produce a tailored CV and cover letter that keep the candidate's original voice.</p>
+</div>
+
+<div class="container">
+    <!-- Section 1: Input -->
+    <div class="card span-2">
+        <div class="section-heading">
+            <span class="num">01</span>
+            <h2>Source Documents</h2>
+        </div>
+
+        <div class="field-row">
+            <div class="input-group">
+                <label>Original CV <span style="font-weight:400; color:var(--ink-faint);">— sets the writing style</span></label>
+                <textarea id="cvInput" placeholder="Paste the candidate's current CV here…"></textarea>
+                <div class="import-row">
+                    <input type="file" id="cvFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'cvInput')">
+                    <button class="import-btn" onclick="document.getElementById('cvFile').click()">Import .txt / .md</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Job Description</label>
+                <textarea id="jdInput" placeholder="Paste the job description here…"></textarea>
+                <div class="import-row">
+                    <input type="file" id="jdFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'jdInput')">
+                    <button class="import-btn" onclick="document.getElementById('jdFile').click()">Import .txt / .md</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-panel">
+            <h3 class="subhead">Model configuration</h3>
+
+            <div class="input-group" style="margin-bottom:12px;">
+                <label>Provider</label>
+                <select id="providerSelect" onchange="updateProviderUI()">
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="google">Google</option>
+                    <option value="llamacpp">llama.cpp — local model</option>
+                </select>
+            </div>
+
+            <div id="openai-settings" class="input-group">
+                <label>API key</label>
+                <input type="password" id="openaiKey" placeholder="sk-...">
+                <div style="margin-top:10px;">
+                    <label>Model</label>
+                    <input type="text" id="openaiModel" placeholder="e.g. gpt-5.6-sol">
+                </div>
+            </div>
+
+            <div id="anthropic-settings" class="input-group" style="display:none;">
+                <label>API key</label>
+                <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+                <div style="margin-top:10px;">
+                    <label>Model</label>
+                    <input type="text" id="anthropicModel" placeholder="e.g. claude-sonnet-5">
+                </div>
+            </div>
+
+            <div id="google-settings" class="input-group" style="display:none;">
+                <label>API key</label>
+                <input type="password" id="googleKey" placeholder="AIza...">
+                <div style="margin-top:10px;">
+                    <label>Model</label>
+                    <input type="text" id="googleModel" placeholder="e.g. gemini-3.6-flash">
+                </div>
+            </div>
+
+            <div id="llamacpp-settings" class="input-group" style="display:none;">
+                <label>Base URL</label>
+                <input type="text" id="llamaUrl" value="http://127.0.0.1:8080">
+                <div style="margin-top:10px;">
+                    <label>Model (as loaded by the server)</label>
+                    <input type="text" id="llamaModel" value="local-model">
+                </div>
+            </div>
+
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:10px;">
+                <input type="checkbox" id="rememberKeys" style="width:auto;" checked>
+                Remember API key in this browser (local storage)
+            </label>
+            <p class="hint">Keys are sent directly from your browser to the provider you select — never to a third-party server. Uncheck above to keep the key in memory for this tab only; it will be cleared when you close or reload the page.</p>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button class="btn" id="analyzeBtn" onclick="runAnalysis()">Analyze match</button>
+            <div class="loading" id="loader"><span class="spinner"></span> <span id="loaderText">Thinking…</span></div>
+            <div class="banner" id="analyzeBanner"></div>
+        </div>
+    </div>
+
+    <!-- Section 2: Analysis -->
+    <div class="card span-2">
+        <div class="section-heading">
+            <span class="num">02</span>
+            <h2>Match Assessment</h2>
+        </div>
+
+        <div class="seal-wrap">
+            <div class="seal" id="seal">—</div>
+            <div class="seal-copy">
+                <p class="tier" id="tierLabel">Awaiting input</p>
+                <p class="label">Overall match</p>
+            </div>
+        </div>
+
+        <h3 class="subhead">Match breakdown</h3>
+        <table class="pros-cons-table" id="matchTable">
+            <thead>
+                <tr>
+                    <th style="width:50px;">Status</th>
+                    <th>Skill / requirement</th>
+                </tr>
+            </thead>
+            <tbody id="matchTableBody">
+                <tr class="placeholder-row"><td colspan="2">Run an analysis to see how the CV lines up against the job description.</td></tr>
+            </tbody>
+        </table>
+
+        <button class="btn" id="generateBtn" style="margin-top:20px;" onclick="runGeneration()" disabled>
+            Continue → Generate tailored CV &amp; cover letter
+        </button>
+        <div class="banner" id="generateBanner"></div>
+    </div>
+
+    <!-- Section 3 & 4: Generated docs -->
+    <div class="card">
+        <div class="section-heading">
+            <span class="num">03</span>
+            <h2>Tailored CV</h2>
+        </div>
+        <div class="result-box empty" id="cvOutput">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <button class="copy-btn" onclick="copyToClipboard('cvOutput', this)">Copy text</button>
+    </div>
+
+    <div class="card">
+        <div class="section-heading">
+            <span class="num">04</span>
+            <h2>Cover Letter</h2>
+        </div>
+        <div class="result-box empty" id="letterOutput">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <button class="copy-btn" onclick="copyToClipboard('letterOutput', this)">Copy text</button>
+    </div>
+</div>
+
+<footer class="note">Style is preserved from the original CV throughout — tone, structure, and voice are matched, not rewritten from scratch.</footer>
+
+<script>
+// --- Provider configuration (single source of truth — add a provider here only) ---
+const PROVIDERS = {
+    openai: {
+        keyId: 'openaiKey', modelId: 'openaiModel', defaultModel: 'gpt-5.6-sol',
+        endpoint: () => 'https://api.openai.com/v1/chat/completions',
+        headers: (key) => ({ 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }),
+        body: (model, systemPrompt) => ({
+            model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: 'Analyze the documents.' }
+            ],
+            temperature: 0.2,
+            response_format: { type: 'json_object' }
+        }),
+        extractText: (data) => data.choices[0].message.content
+    },
+    anthropic: {
+        keyId: 'anthropicKey', modelId: 'anthropicModel', defaultModel: 'claude-sonnet-5',
+        endpoint: () => 'https://api.anthropic.com/v1/messages',
+        headers: (key) => ({ 'x-api-key': key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' }),
+        body: (model, systemPrompt) => ({
+            model,
+            max_tokens: 2000,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: 'Analyze the documents.' }]
+        }),
+        extractText: (data) => data.content[0].text
+    },
+    google: {
+        keyId: 'googleKey', modelId: 'googleModel', defaultModel: 'gemini-3.6-flash',
+        endpoint: (model, key) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+        headers: () => ({ 'Content-Type': 'application/json' }),
+        body: (model, systemPrompt) => ({
+            contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+        }),
+        extractText: (data) => data.candidates[0].content.parts[0].text
+    },
+    llamacpp: {
+        // llama.cpp's llama-server exposes an OpenAI-compatible API (default http://127.0.0.1:8080).
+        needsKey: false,
+        endpoint: () => (document.getElementById('llamaUrl').value || 'http://127.0.0.1:8080').trim().replace(/\/+$/, '') + '/v1/chat/completions',
+        headers: () => ({ 'Content-Type': 'application/json' }),
+        body: (model, systemPrompt, cvText, jdText) => ({
+            model: document.getElementById('llamaModel').value || 'local-model', // informational; fixed at server start
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: 'CV:\n' + cvText + '\n\nJD:\n' + jdText }
+            ],
+            temperature: 0.7,
+            stream: false
+        }),
+        extractText: (data) => data.choices[0].message.content
+    }
+};
+
+let hasAnalysis = false; // gates the "Continue → Generate" step
+
+// --- Persisted settings (local storage only, opt-out via "Remember" checkbox) ---
+const STORAGE_KEY = 'cv_matcher_settings';
+
+function loadSettings() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch {
+        return {};
+    }
+}
+
+function saveSettingsIfAllowed() {
+    if (!document.getElementById('rememberKeys').checked) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+    }
+    const saved = {};
+    for (const [name, cfg] of Object.entries(PROVIDERS)) {
+        if (cfg.keyId) saved[cfg.keyId] = document.getElementById(cfg.keyId).value;
+        if (cfg.modelId) saved[cfg.modelId] = document.getElementById(cfg.modelId).value;
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+}
+
+window.onload = () => {
+    const saved = loadSettings();
+
+    for (const cfg of Object.values(PROVIDERS)) {
+        if (cfg.keyId) document.getElementById(cfg.keyId).value = saved[cfg.keyId] || '';
+        if (cfg.modelId) {
+            const el = document.getElementById(cfg.modelId);
+            el.value = saved[cfg.modelId] || '';
+            el.placeholder = 'e.g. ' + cfg.defaultModel;
+        }
+    }
+    if (Object.keys(saved).length === 0) {
+        document.getElementById('rememberKeys').checked = false;
+    }
+
+    document.getElementById('providerSelect').addEventListener('change', updateProviderUI);
+
+    document.querySelectorAll('#openai-settings input, #anthropic-settings input, #google-settings input')
+        .forEach(el => el.addEventListener('input', saveSettingsIfAllowed));
+    document.getElementById('rememberKeys').addEventListener('change', saveSettingsIfAllowed);
+
+    updateProviderUI();
+};
+
+function updateProviderUI() {
+    const provider = document.getElementById('providerSelect').value;
+    for (const name of Object.keys(PROVIDERS)) {
+        document.getElementById(name + '-settings').style.display = (name === provider) ? 'block' : 'none';
+    }
+}
+
+function currentProvider() {
+    return document.getElementById('providerSelect').value;
+}
+
+function currentApiKey(provider) {
+    const cfg = PROVIDERS[provider];
+    return cfg.keyId ? document.getElementById(cfg.keyId).value.trim() : '';
+}
+
+function currentModel(provider) {
+    const cfg = PROVIDERS[provider];
+    const entered = cfg.modelId ? document.getElementById(cfg.modelId).value.trim() : '';
+    return entered || cfg.defaultModel || '';
+}
+
+// --- Inline status banners (replaces alert()) ---
+function showBanner(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    el.textContent = message;
+    el.className = 'banner show ' + (type || 'error');
+}
+function clearBanner(elementId) {
+    const el = document.getElementById(elementId);
+    el.className = 'banner';
+    el.textContent = '';
+}
+
+// --- File Import (txt / md only) ---
+function handleImportFile(event, textareaId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'md'].includes(ext)) {
+        showBanner('analyzeBanner', 'Only .txt and .md files are supported.', 'warn');
+        event.target.value = ''; // reset so the same file can be retried
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const ta = document.getElementById(textareaId);
+        ta.value = text; // replace existing content with the imported file
+    };
+    reader.readAsText(file);
+
+    event.target.value = ''; // allow re-importing the same file
+}
+
+// --- Core Logic: LLM API Calls ---
+
+// mode: "analysis" (score + pros/cons) or "documents" (tailored CV + cover letter)
+async function callLLM(provider, apiKey, mode) {
+    const cfg = PROVIDERS[provider];
+    const model = currentModel(provider);
+    const cvText = document.getElementById('cvInput').value;
+    const jdText = document.getElementById('jdInput').value;
+
+    // System Prompts — "analysis" scores the fit, "documents" writes the CV + letter.
+    const sharedConstraints = `
+1. **Style Preservation**: You MUST mimic the writing style of the original CV provided below.
+   - If the CV uses bullet points, use them in the output.
+   - If the tone is formal/technical, keep it formal/technical.
+   - Do NOT change the candidate's name or contact info if present.
+   - Match the language in the JD.
+   - Keep the CV to a maximum of 60 lines, considering 70 chars per line.
+2. **JSON Output**: You MUST return a valid JSON object with no markdown formatting (no \`\`\`json\`\`\`).
+`;
+    const inputBlock = `
+Input Data:
+CV: ${cvText}
+JD: ${jdText}
+`;
+
+    let systemPrompt;
+    if (mode === 'analysis') {
+        systemPrompt = `
+You are an expert Career Coach.
+Your task is to analyze a CV against a Job Description (JD).
+
+CRITICAL CONSTRAINTS:
+${sharedConstraints}
+3. **Analysis Logic**:
+   - "match_score": A float between 0.0 and 1.0 representing the fit.
+   - "pros": Array of strings listing skills/attributes present in BOTH CV and JD.
+   - "cons": Array of strings listing critical skills in JD missing from CV.
+
+${inputBlock}
+Return ONLY the JSON object.
+`;
+    } else {
+        systemPrompt = `
+You are an expert Career Coach and AI Resume Writer.
+Your task is to tailor the CV to the Job Description (JD) and write a matching cover letter.
+
+CRITICAL CONSTRAINTS:
+${sharedConstraints}
+3. **Documents**:
+   - "tailored_cv": The full text of a tailored CV. Reorder sections to highlight matched skills. Keep original style.
+   - "presentation_letter": A cover letter tailored to the JD, written in the exact same voice/style as the original CV.
+
+${inputBlock}
+Return ONLY the JSON object.
+`;
+    }
+
+    const url = cfg.endpoint(model, apiKey);
+    const headers = cfg.headers(apiKey);
+    const body = cfg.body(model, systemPrompt, cvText, jdText);
+
+    let response;
+    try {
+        response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(body)
+        });
+    } catch (netErr) {
+        // A rejected fetch (not an HTTP error) means the request never completed:
+        // server down, wrong host/port, or a CORS block.
+        if (provider === 'llamacpp') {
+            throw new Error(
+                'Could not reach llama-server at ' + url + '. Check that: (1) llama-server is running and bound to that host/port, ' +
+                '(2) the Base URL above matches your server, and (3) your browser can reach it — a page opened from file:// has a "null" origin ' +
+                'that some builds of llama.cpp reject. Try serving this page over http (e.g. "python3 -m http.server") or point the Base URL at a CORS-enabled proxy.'
+            );
+        }
+        throw new Error('Network error: ' + (netErr && netErr.message ? netErr.message : 'request failed'));
+    }
+
+    if (!response.ok) {
+        let detail = '';
+        try { detail = (await response.json())?.error?.message || ''; } catch { /* body wasn't JSON */ }
+        throw new Error(`API error: ${response.status}${detail ? ' — ' + detail : ''}`);
+    }
+
+    const data = await response.json();
+    let resultText = cfg.extractText(data);
+
+    // Clean potential markdown code fences from LLM output
+    resultText = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    try {
+        return JSON.parse(resultText);
+    } catch {
+        throw new Error('The model did not return valid JSON. Try again, or switch models.');
+    }
+}
+
+// --- UI Actions ---
+
+function requireInputs(bannerId) {
+    const cv = document.getElementById('cvInput').value;
+    const jd = document.getElementById('jdInput').value;
+    if (!cv || !jd) {
+        showBanner(bannerId, 'Add both a CV and a job description before continuing.', 'warn');
+        return null;
+    }
+
+    const provider = currentProvider();
+    const apiKey = currentApiKey(provider);
+    if (PROVIDERS[provider].needsKey !== false && !apiKey) {
+        showBanner(bannerId, 'Enter an API key for the selected provider before continuing.', 'warn');
+        return null;
+    }
+    return { provider, apiKey };
+}
+
+// Build a table row without innerHTML — result text comes from the LLM and must
+// never be parsed as HTML (an untrusted JD/CV could otherwise inject markup via
+// a prompt-injection response).
+function addMatchRow(tbody, iconClass, iconText, text) {
+    const tr = document.createElement('tr');
+    const iconTd = document.createElement('td');
+    const icon = document.createElement('span');
+    icon.className = 'status-icon ' + iconClass;
+    icon.textContent = iconText;
+    iconTd.appendChild(icon);
+    const textTd = document.createElement('td');
+    textTd.textContent = text;
+    tr.append(iconTd, textTd);
+    tbody.appendChild(tr);
+}
+
+async function runAnalysis() {
+    clearBanner('analyzeBanner');
+    const creds = requireInputs('analyzeBanner');
+    if (!creds) return;
+
+    // UI Updates
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('loaderText').textContent = 'Analyzing match…';
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('seal').textContent = '···';
+    document.getElementById('seal').className = 'seal';
+    document.getElementById('tierLabel').textContent = 'Analyzing…';
+    document.getElementById('tierLabel').className = 'tier';
+
+    try {
+        const result = await callLLM(creds.provider, creds.apiKey, 'analysis');
+
+        // Update Score
+        const score = result.match_score;
+        const tone = score > 0.7 ? 'pine' : score > 0.4 ? 'gold' : 'brick';
+        const tierText = score > 0.7 ? 'Strong fit' : score > 0.4 ? 'Partial fit' : 'Weak fit';
+
+        const pct = Math.min(100, Math.max(0, Math.round(score * 100)));
+        document.getElementById('seal').textContent = pct + '%';
+        document.getElementById('seal').className = 'seal ' + tone;
+        document.getElementById('tierLabel').textContent = tierText;
+        document.getElementById('tierLabel').className = 'tier ' + tone;
+
+        // Update Table — build off-DOM, then attach once to avoid a reflow per row
+        const tbody = document.getElementById('matchTableBody');
+        const fragmentBody = document.createElement('tbody');
+        fragmentBody.id = 'matchTableBody';
+        (result.pros || []).forEach(pro => addMatchRow(fragmentBody, 'pro', '✓', pro));
+        (result.cons || []).forEach(con => addMatchRow(fragmentBody, 'con', '✕', con));
+        tbody.replaceWith(fragmentBody);
+
+        // Analysis done — offer the next step
+        hasAnalysis = true;
+
+    } catch (error) {
+        console.error(error);
+        showBanner('analyzeBanner', 'Analysis failed: ' + error.message, 'error');
+        document.getElementById('seal').textContent = '!';
+        document.getElementById('seal').className = 'seal brick';
+        document.getElementById('tierLabel').textContent = 'Analysis failed';
+        document.getElementById('tierLabel').className = 'tier brick';
+    } finally {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('analyzeBtn').disabled = false;
+        document.getElementById('generateBtn').disabled = !hasAnalysis;
+    }
+}
+
+async function runGeneration() {
+    clearBanner('generateBanner');
+    const creds = requireInputs('generateBanner');
+    if (!creds) return;
+
+    // UI Updates
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('loaderText').textContent = 'Generating documents…';
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('generateBtn').disabled = true;
+
+    try {
+        const result = await callLLM(creds.provider, creds.apiKey, 'documents');
+
+        // Update Outputs
+        const cvOut = document.getElementById('cvOutput');
+        const letterOut = document.getElementById('letterOutput');
+        cvOut.textContent = result.tailored_cv;
+        cvOut.classList.remove('empty');
+        letterOut.textContent = result.presentation_letter;
+        letterOut.classList.remove('empty');
+
+    } catch (error) {
+        console.error(error);
+        showBanner('generateBanner', 'Document generation failed: ' + error.message, 'error');
+    } finally {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('analyzeBtn').disabled = false;
+        document.getElementById('generateBtn').disabled = !hasAnalysis;
+    }
+}
+
+function copyToClipboard(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (el.classList.contains('empty')) return;
+
+    navigator.clipboard.writeText(el.textContent).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1400);
+    }).catch(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copy failed';
+        setTimeout(() => { btn.textContent = original; }, 1400);
+    });
+}
+</script>
+</body>
+</html>
