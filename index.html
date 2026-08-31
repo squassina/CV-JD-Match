@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare a CV against a job description, get a structured fit assessment, and produce a tailored CV and cover letter while preserving the candidate's voice.">
     <title>CV–JD Match</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -40,6 +41,8 @@
             margin: 0;
             padding: 0 20px 48px;
         }
+
+        main { min-height: 100vh; }
 
         .masthead {
             max-width: 1180px;
@@ -382,7 +385,7 @@
     </style>
 </head>
 <body>
-
+<main>
 <div class="masthead">
     <p class="eyebrow">Candidate Assessment Tool</p>
     <h1>CV–JD Match</h1>
@@ -399,8 +402,9 @@
 
         <div class="field-row">
             <div class="input-group">
-                <label>Original CV <span style="font-weight:400; color:var(--ink-faint);">— sets the writing style</span></label>
-                <textarea id="cvInput" placeholder="Paste the candidate's current CV here…"></textarea>
+                <label for="cvInput">Original CV <span style="font-weight:400; color:var(--ink-faint);">— sets the writing style</span></label>
+                <textarea id="cvInput" placeholder="Paste the candidate's current CV here…" aria-describedby="cvCount"></textarea>
+                <div class="hint" id="cvCount">0 chars</div>
                 <div class="import-row">
                     <input type="file" id="cvFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'cvInput')">
                     <button class="import-btn" onclick="document.getElementById('cvFile').click()">Import .txt / .md</button>
@@ -408,8 +412,9 @@
             </div>
 
             <div class="input-group">
-                <label>Job Description</label>
-                <textarea id="jdInput" placeholder="Paste the job description here…"></textarea>
+                <label for="jdInput">Job Description</label>
+                <textarea id="jdInput" placeholder="Paste the job description here…" aria-describedby="jdCount"></textarea>
+                <div class="hint" id="jdCount">0 chars</div>
                 <div class="import-row">
                     <input type="file" id="jdFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'jdInput')">
                     <button class="import-btn" onclick="document.getElementById('jdFile').click()">Import .txt / .md</button>
@@ -431,52 +436,53 @@
             </div>
 
             <div id="openai-settings" class="input-group">
-                <label>API key</label>
+                <label for="openaiKey">API key</label>
                 <input type="password" id="openaiKey" placeholder="sk-...">
                 <div style="margin-top:10px;">
-                    <label>Model</label>
+                    <label for="openaiModel">Model</label>
                     <input type="text" id="openaiModel" placeholder="e.g. gpt-5.6-sol">
                 </div>
             </div>
 
             <div id="anthropic-settings" class="input-group" style="display:none;">
-                <label>API key</label>
+                <label for="anthropicKey">API key</label>
                 <input type="password" id="anthropicKey" placeholder="sk-ant-...">
                 <div style="margin-top:10px;">
-                    <label>Model</label>
+                    <label for="anthropicModel">Model</label>
                     <input type="text" id="anthropicModel" placeholder="e.g. claude-sonnet-5">
                 </div>
             </div>
 
             <div id="google-settings" class="input-group" style="display:none;">
-                <label>API key</label>
+                <label for="googleKey">API key</label>
                 <input type="password" id="googleKey" placeholder="AIza...">
                 <div style="margin-top:10px;">
-                    <label>Model</label>
+                    <label for="googleModel">Model</label>
                     <input type="text" id="googleModel" placeholder="e.g. gemini-3.6-flash">
                 </div>
             </div>
 
             <div id="llamacpp-settings" class="input-group" style="display:none;">
-                <label>Base URL</label>
+                <label for="llamaUrl">Base URL</label>
                 <input type="text" id="llamaUrl" value="http://127.0.0.1:8080">
                 <div style="margin-top:10px;">
-                    <label>Model (as loaded by the server)</label>
+                    <label for="llamaModel">Model (as loaded by the server)</label>
                     <input type="text" id="llamaModel" value="local-model">
                 </div>
             </div>
 
             <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:10px;">
-                <input type="checkbox" id="rememberKeys" style="width:auto;" checked>
+                <input type="checkbox" id="rememberKeys" style="width:auto;">
                 Remember API key in this browser (local storage)
             </label>
-            <p class="hint">Keys are sent directly from your browser to the provider you select — never to a third-party server. Uncheck above to keep the key in memory for this tab only; it will be cleared when you close or reload the page.</p>
+            <p class="hint">Keys are sent directly from your browser to the provider you select — never to a third-party server. Uncheck above to keep the key in memory for this tab only; it will be cleared when the tab closes.</p>
         </div>
 
         <div style="margin-top:20px;">
             <button class="btn" id="analyzeBtn" onclick="runAnalysis()">Analyze match</button>
-            <div class="loading" id="loader"><span class="spinner"></span> <span id="loaderText">Thinking…</span></div>
-            <div class="banner" id="analyzeBanner"></div>
+            <div class="loading" id="loader" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span> <span id="loaderText">Thinking…</span></div>
+            <div class="banner" id="analyzeBanner" role="status" aria-live="polite"></div>
+            <details id="debugOutput" style="margin-top:12px; display:none;"><summary>Show raw model output</summary><pre id="debugPre" style="white-space:pre-wrap; word-wrap:break-word; max-height:240px; overflow:auto;"></pre></details>
         </div>
     </div>
 
@@ -488,7 +494,7 @@
         </div>
 
         <div class="seal-wrap">
-            <div class="seal" id="seal">—</div>
+            <div class="seal" id="seal" aria-hidden="true">—</div>
             <div class="seal-copy">
                 <p class="tier" id="tierLabel">Awaiting input</p>
                 <p class="label">Overall match</p>
@@ -511,7 +517,7 @@
         <button class="btn" id="generateBtn" style="margin-top:20px;" onclick="runGeneration()" disabled>
             Continue → Generate tailored CV &amp; cover letter
         </button>
-        <div class="banner" id="generateBanner"></div>
+        <div class="banner" id="generateBanner" role="status" aria-live="polite"></div>
     </div>
 
     <!-- Section 3 & 4: Generated docs -->
@@ -520,7 +526,7 @@
             <span class="num">03</span>
             <h2>Tailored CV</h2>
         </div>
-        <div class="result-box empty" id="cvOutput">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <div class="result-box empty" id="cvOutput" role="region" aria-label="Tailored CV">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
         <button class="copy-btn" onclick="copyToClipboard('cvOutput', this)">Copy text</button>
     </div>
 
@@ -529,10 +535,13 @@
             <span class="num">04</span>
             <h2>Cover Letter</h2>
         </div>
-        <div class="result-box empty" id="letterOutput">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <div class="result-box empty" id="letterOutput" role="region" aria-label="Cover letter">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
         <button class="copy-btn" onclick="copyToClipboard('letterOutput', this)">Copy text</button>
     </div>
 </div>
+</main>
+
+<footer class="note">This tool runs entirely in your browser. If using a local llama.cpp server, ensure it is running and CORS-enabled.</footer>
 
 <script>
 // --- Provider configuration (single source of truth — add a provider here only) ---
@@ -547,10 +556,9 @@ const PROVIDERS = {
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: 'Analyze the documents.' }
             ],
-            temperature: 0.2,
-            response_format: { type: 'json_object' }
+            temperature: 0.2
         }),
-        extractText: (data) => data.choices[0].message.content
+        extractText: (data) => data.choices?.[0]?.message?.content || ''
     },
     anthropic: {
         keyId: 'anthropicKey', modelId: 'anthropicModel', defaultModel: 'claude-sonnet-5',
@@ -562,7 +570,7 @@ const PROVIDERS = {
             system: systemPrompt,
             messages: [{ role: 'user', content: 'Analyze the documents.' }]
         }),
-        extractText: (data) => data.content[0].text
+        extractText: (data) => data?.content?.[0]?.text || ''
     },
     google: {
         keyId: 'googleKey', modelId: 'googleModel', defaultModel: 'gemini-3.6-flash',
@@ -572,7 +580,7 @@ const PROVIDERS = {
             contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
             generationConfig: { responseMimeType: 'application/json' }
         }),
-        extractText: (data) => data.candidates[0].content.parts[0].text
+        extractText: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     },
     llamacpp: {
         // llama.cpp's llama-server exposes an OpenAI-compatible API (default http://127.0.0.1:8080).
@@ -588,7 +596,7 @@ const PROVIDERS = {
             temperature: 0.7,
             stream: false
         }),
-        extractText: (data) => data.choices[0].message.content
+        extractText: (data) => data?.choices?.[0]?.message?.content || ''
     }
 };
 
@@ -599,26 +607,39 @@ const STORAGE_KEY = 'cv_matcher_settings';
 
 function loadSettings() {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        // Prefer persistent localStorage, fall back to sessionStorage
+        const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const session = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+        // merge, local wins
+        return Object.keys(local).length ? local : session;
     } catch {
         return {};
     }
 }
 
 function saveSettingsIfAllowed() {
-    if (!document.getElementById('rememberKeys').checked) {
-        localStorage.removeItem(STORAGE_KEY);
-        return;
-    }
+    // If rememberKeys is checked -> localStorage; otherwise sessionStorage
+    const useLocal = document.getElementById('rememberKeys').checked;
     const saved = {};
     for (const [name, cfg] of Object.entries(PROVIDERS)) {
         if (cfg.keyId) saved[cfg.keyId] = document.getElementById(cfg.keyId).value;
         if (cfg.modelId) saved[cfg.modelId] = document.getElementById(cfg.modelId).value;
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    try {
+        if (useLocal) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+            sessionStorage.removeItem(STORAGE_KEY);
+        } else {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    } catch (e) {
+        // storage may be unavailable (private mode) — ignore silently
+        console.warn('Could not persist settings:', e && e.message);
+    }
 }
 
-window.onload = () => {
+window.addEventListener('load', () => {
     const saved = loadSettings();
 
     for (const cfg of Object.values(PROVIDERS)) {
@@ -629,23 +650,35 @@ window.onload = () => {
             el.placeholder = 'e.g. ' + cfg.defaultModel;
         }
     }
+    // default remember to false for safety
     if (Object.keys(saved).length === 0) {
         document.getElementById('rememberKeys').checked = false;
+    } else {
+        // if values came from localStorage, set checked; if from session, leave unchecked
+        const fromLocal = !!localStorage.getItem(STORAGE_KEY);
+        document.getElementById('rememberKeys').checked = fromLocal;
     }
 
     document.getElementById('providerSelect').addEventListener('change', updateProviderUI);
 
-    document.querySelectorAll('#openai-settings input, #anthropic-settings input, #google-settings input')
+    // register inputs to persist appropriately
+    document.querySelectorAll('#openai-settings input, #anthropic-settings input, #google-settings input, #llamacpp-settings input')
         .forEach(el => el.addEventListener('input', saveSettingsIfAllowed));
     document.getElementById('rememberKeys').addEventListener('change', saveSettingsIfAllowed);
 
+    // char counters
+    document.getElementById('cvInput').addEventListener('input', updateCharCounts);
+    document.getElementById('jdInput').addEventListener('input', updateCharCounts);
     updateProviderUI();
-};
+    updateCharCounts();
+});
 
 function updateProviderUI() {
     const provider = document.getElementById('providerSelect').value;
     for (const name of Object.keys(PROVIDERS)) {
-        document.getElementById(name + '-settings').style.display = (name === provider) ? 'block' : 'none';
+        const el = document.getElementById(name + '-settings');
+        if (!el) continue;
+        el.style.display = (name === provider) ? 'block' : 'none';
     }
 }
 
@@ -693,14 +726,48 @@ function handleImportFile(event, textareaId) {
         const text = e.target.result;
         const ta = document.getElementById(textareaId);
         ta.value = text; // replace existing content with the imported file
+        updateCharCounts();
     };
     reader.readAsText(file);
 
     event.target.value = ''; // allow re-importing the same file
 }
 
-// --- Core Logic: LLM API Calls ---
+// --- Helpers: robust fetch + JSON extraction ---
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, { ...opts, signal: controller.signal });
+        clearTimeout(id);
+        return res;
+    } catch (err) {
+        clearTimeout(id);
+        if (err.name === 'AbortError') throw new Error('Request timed out');
+        throw err;
+    }
+}
 
+function extractFirstJson(text) {
+    if (!text || typeof text !== 'string') throw new Error('No text to parse');
+    // Try direct parse
+    try { return JSON.parse(text); } catch (e) {}
+
+    // Remove common fences
+    let cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+
+    // Find first {...} or [...]
+    const objMatch = cleaned.match(/\{[\s\S]*\}/);
+    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+    const candidate = objMatch ? objMatch[0] : (arrMatch ? arrMatch[0] : null);
+    if (!candidate) throw new Error('No JSON object/array found in model output');
+
+    // Remove trailing commas before } or ] which often break JSON
+    const safe = candidate.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+    return JSON.parse(safe);
+}
+
+// --- Core Logic: LLM API Calls ---
 // mode: "analysis" (score + pros/cons) or "documents" (tailored CV + cover letter)
 async function callLLM(provider, apiKey, mode) {
     const cfg = PROVIDERS[provider];
@@ -710,19 +777,15 @@ async function callLLM(provider, apiKey, mode) {
 
     // System Prompts — "analysis" scores the fit, "documents" writes the CV + letter.
     const sharedConstraints = `
-1. **Style Preservation**: You MUST mimic the writing style of the original CV provided below.
+1. Style Preservation: You MUST mimic the writing style of the original CV provided below.
    - If the CV uses bullet points, use them in the output.
    - If the tone is formal/technical, keep it formal/technical.
    - Do NOT change the candidate's name or contact info if present.
    - Match the language in the JD.
    - Keep the CV to a maximum of 60 lines, considering 70 chars per line.
-2. **JSON Output**: You MUST return a valid JSON object with no markdown formatting (no \`\`\`json\`\`\`).
+2. JSON Output: You MUST return a valid JSON object with no markdown formatting (no ```json).
 `;
-    const inputBlock = `
-Input Data:
-CV: ${cvText}
-JD: ${jdText}
-`;
+    const inputBlock = `\nInput Data:\nCV: ${cvText}\nJD: ${jdText}\n`;
 
     let systemPrompt;
     if (mode === 'analysis') {
@@ -732,7 +795,7 @@ Your task is to analyze a CV against a Job Description (JD).
 
 CRITICAL CONSTRAINTS:
 ${sharedConstraints}
-3. **Analysis Logic**:
+3. Analysis Logic:
    - "match_score": A float between 0.0 and 1.0 representing the fit.
    - "pros": Array of strings listing skills/attributes present in BOTH CV and JD.
    - "cons": Array of strings listing critical skills in JD missing from CV.
@@ -747,7 +810,7 @@ Your task is to tailor the CV to the Job Description (JD) and write a matching c
 
 CRITICAL CONSTRAINTS:
 ${sharedConstraints}
-3. **Documents**:
+3. Documents:
    - "tailored_cv": The full text of a tailored CV. Reorder sections to highlight matched skills. Keep original style.
    - "presentation_letter": A cover letter tailored to the JD, written in the exact same voice/style as the original CV.
 
@@ -762,14 +825,12 @@ Return ONLY the JSON object.
 
     let response;
     try {
-        response = await fetch(url, {
+        response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(body)
-        });
+        }, 30000);
     } catch (netErr) {
-        // A rejected fetch (not an HTTP error) means the request never completed:
-        // server down, wrong host/port, or a CORS block.
         if (provider === 'llamacpp') {
             throw new Error(
                 'Could not reach llama-server at ' + url + '. Check that: (1) llama-server is running and bound to that host/port, ' +
@@ -782,20 +843,32 @@ Return ONLY the JSON object.
 
     if (!response.ok) {
         let detail = '';
-        try { detail = (await response.json())?.error?.message || ''; } catch { /* body wasn't JSON */ }
+        try { const bodyJson = await response.json(); detail = bodyJson?.error?.message || JSON.stringify(bodyJson).slice(0, 400); } catch { /* body wasn't JSON */ }
         throw new Error(`API error: ${response.status}${detail ? ' — ' + detail : ''}`);
     }
 
     const data = await response.json();
-    let resultText = cfg.extractText(data);
+    let resultText = cfg.extractText(data) || '';
+
+    // Some providers return structured content directly; if resultText is object, handle
+    if (typeof resultText !== 'string') {
+        try { return resultText; } catch (e) { /* fallthrough */ }
+    }
 
     // Clean potential markdown code fences from LLM output
-    resultText = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+    resultText = resultText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     try {
-        return JSON.parse(resultText);
-    } catch {
-        throw new Error('The model did not return valid JSON. Try again, or switch models.');
+        return extractFirstJson(resultText);
+    } catch (parseErr) {
+        // expose raw output in debug area (text only) to help diagnostics
+        const debug = document.getElementById('debugOutput');
+        const debugPre = document.getElementById('debugPre');
+        if (debug && debugPre) {
+            debugPre.textContent = resultText || JSON.stringify(data).slice(0, 10000);
+            debug.style.display = 'block';
+        }
+        throw new Error('The model did not return valid JSON. See raw output in the debug area.');
     }
 }
 
@@ -853,7 +926,7 @@ async function runAnalysis() {
         const result = await callLLM(creds.provider, creds.apiKey, 'analysis');
 
         // Update Score
-        const score = result.match_score;
+        const score = Number(result.match_score) || 0;
         const tone = score > 0.7 ? 'pine' : score > 0.4 ? 'gold' : 'brick';
         const tierText = score > 0.7 ? 'Strong fit' : score > 0.4 ? 'Partial fit' : 'Weak fit';
 
@@ -905,9 +978,9 @@ async function runGeneration() {
         // Update Outputs
         const cvOut = document.getElementById('cvOutput');
         const letterOut = document.getElementById('letterOutput');
-        cvOut.textContent = result.tailored_cv;
+        cvOut.textContent = result.tailored_cv || result.tailoredCV || '';
         cvOut.classList.remove('empty');
-        letterOut.textContent = result.presentation_letter;
+        letterOut.textContent = result.presentation_letter || result.presentationLetter || '';
         letterOut.classList.remove('empty');
 
     } catch (error) {
@@ -935,6 +1008,21 @@ function copyToClipboard(elementId, btn) {
         setTimeout(() => { btn.textContent = original; }, 1400);
     });
 }
+
+// --- Character count & token hints ---
+const MAX_CHARS = 40000;
+function updateCharCounts() {
+    const cv = document.getElementById('cvInput');
+    const jd = document.getElementById('jdInput');
+    document.getElementById('cvCount').textContent = `${cv.value.length} chars` + (cv.value.length > MAX_CHARS ? ' — too long' : '');
+    document.getElementById('jdCount').textContent = `${jd.value.length} chars` + (jd.value.length > MAX_CHARS ? ' — too long' : '');
+    if (cv.value.length > MAX_CHARS || jd.value.length > MAX_CHARS) {
+        showBanner('analyzeBanner', 'One of the inputs is very long and may exceed model limits. Consider trimming or summarizing the text.', 'warn');
+    } else {
+        clearBanner('analyzeBanner');
+    }
+}
+
 </script>
 </body>
 </html>
