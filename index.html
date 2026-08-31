@@ -7,6 +7,13 @@
     <title>CV–JD Match</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- PDF.js library for client-side PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
     <style>
         :root {
             --paper: #f6f4ee;
@@ -163,6 +170,12 @@
             resize: vertical;
             background: #fffefb;
             color: var(--ink);
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        textarea.drag-over {
+            border-color: var(--pine);
+            background-color: var(--pine-tint);
         }
 
         textarea:focus, select:focus, input:focus, button:focus-visible {
@@ -403,21 +416,21 @@
         <div class="field-row">
             <div class="input-group">
                 <label for="cvInput">Original CV <span style="font-weight:400; color:var(--ink-faint);">— sets the writing style</span></label>
-                <textarea id="cvInput" placeholder="Paste the candidate's current CV here…" aria-describedby="cvCount"></textarea>
+                <textarea id="cvInput" placeholder="Paste or drag & drop the candidate's CV here (.txt, .md, .pdf)…" aria-describedby="cvCount"></textarea>
                 <div class="hint" id="cvCount">0 chars</div>
                 <div class="import-row">
-                    <input type="file" id="cvFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'cvInput')">
-                    <button class="import-btn" onclick="document.getElementById('cvFile').click()">Import .txt / .md</button>
+                    <input type="file" id="cvFile" accept=".txt,.md,.pdf" style="display:none" onchange="handleImportFile(event, 'cvInput')">
+                    <button class="import-btn" onclick="document.getElementById('cvFile').click()">Import .txt / .md / .pdf</button>
                 </div>
             </div>
 
             <div class="input-group">
                 <label for="jdInput">Job Description</label>
-                <textarea id="jdInput" placeholder="Paste the job description here…" aria-describedby="jdCount"></textarea>
+                <textarea id="jdInput" placeholder="Paste or drag & drop the job description here (.txt, .md, .pdf)…" aria-describedby="jdCount"></textarea>
                 <div class="hint" id="jdCount">0 chars</div>
                 <div class="import-row">
-                    <input type="file" id="jdFile" accept=".txt,.md" style="display:none" onchange="handleImportFile(event, 'jdInput')">
-                    <button class="import-btn" onclick="document.getElementById('jdFile').click()">Import .txt / .md</button>
+                    <input type="file" id="jdFile" accept=".txt,.md,.pdf" style="display:none" onchange="handleImportFile(event, 'jdInput')">
+                    <button class="import-btn" onclick="document.getElementById('jdFile').click()">Import .txt / .md / .pdf</button>
                 </div>
             </div>
         </div>
@@ -566,7 +579,7 @@ const PROVIDERS = {
         headers: (key) => ({ 'x-api-key': key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' }),
         body: (model, systemPrompt) => ({
             model,
-            max_tokens: 2000,
+            max_tokens: 4000,
             system: systemPrompt,
             messages: [{ role: 'user', content: 'Analyze the documents.' }]
         }),
@@ -634,29 +647,72 @@ function saveSettingsIfAllowed() {
     }
 }
 
-// --- File Import (txt / md only) ---
-// Defined globally so inline onchange listeners can access it
-function handleImportFile(event, textareaId) {
-    const file = event.target.files[0];
-    if (!file) return;
-
+// --- PDF & Text File Parser ---
+async function readTextOrPdf(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'md'].includes(ext)) {
-        showBanner('analyzeBanner', 'Only .txt and .md files are supported.', 'warn');
-        event.target.value = '';
-        return;
+    if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const tokenized = await page.getTextContent();
+            const pageText = tokenized.items.map(token => token.str).join(' ');
+            fullText += pageText + '\n\n';
+        }
+        return fullText.trim();
+    } else if (['txt', 'md'].includes(ext)) {
+        return await file.text();
+    } else {
+        throw new Error('Unsupported file format. Please upload .txt, .md, or .pdf files.');
     }
+}
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target.result;
+async function processFile(file, textareaId) {
+    try {
+        const text = await readTextOrPdf(file);
         const ta = document.getElementById(textareaId);
         ta.value = text;
         updateCharCounts();
-    };
-    reader.readAsText(file);
+        clearBanner('analyzeBanner');
+    } catch (err) {
+        showBanner('analyzeBanner', err.message || 'Error processing file.', 'warn');
+    }
+}
 
-    event.target.value = '';
+function handleImportFile(event, textareaId) {
+    const file = event.target.files[0];
+    if (!file) return;
+    processFile(file, textareaId);
+    event.target.value = ''; // allow re-importing the same file
+}
+
+// --- Drag and Drop Setup ---
+function setupDragAndDrop(textareaId) {
+    const ta = document.getElementById(textareaId);
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        ta.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            ta.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        ta.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            ta.classList.remove('drag-over');
+        });
+    });
+
+    ta.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            processFile(files[0], textareaId);
+        }
+    });
 }
 
 window.addEventListener('load', () => {
@@ -686,6 +742,11 @@ window.addEventListener('load', () => {
 
     document.getElementById('cvInput').addEventListener('input', updateCharCounts);
     document.getElementById('jdInput').addEventListener('input', updateCharCounts);
+    
+    // Register drag and drop handlers
+    setupDragAndDrop('cvInput');
+    setupDragAndDrop('jdInput');
+
     updateProviderUI();
     updateCharCounts();
 });
