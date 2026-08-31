@@ -583,12 +583,11 @@ const PROVIDERS = {
         extractText: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     },
     llamacpp: {
-        // llama.cpp's llama-server exposes an OpenAI-compatible API (default http://127.0.0.1:8080).
         needsKey: false,
         endpoint: () => (document.getElementById('llamaUrl').value || 'http://127.0.0.1:8080').trim().replace(/\/+$/, '') + '/v1/chat/completions',
         headers: () => ({ 'Content-Type': 'application/json' }),
         body: (model, systemPrompt, cvText, jdText) => ({
-            model: document.getElementById('llamaModel').value || 'local-model', // informational; fixed at server start
+            model: document.getElementById('llamaModel').value || 'local-model',
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: 'CV:\n' + cvText + '\n\nJD:\n' + jdText }
@@ -602,15 +601,13 @@ const PROVIDERS = {
 
 let hasAnalysis = false; // gates the "Continue → Generate" step
 
-// --- Persisted settings (local storage only, opt-out via "Remember" checkbox) ---
+// --- Persisted settings ---
 const STORAGE_KEY = 'cv_matcher_settings';
 
 function loadSettings() {
     try {
-        // Prefer persistent localStorage, fall back to sessionStorage
         const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         const session = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
-        // merge, local wins
         return Object.keys(local).length ? local : session;
     } catch {
         return {};
@@ -618,7 +615,6 @@ function loadSettings() {
 }
 
 function saveSettingsIfAllowed() {
-    // If rememberKeys is checked -> localStorage; otherwise sessionStorage
     const useLocal = document.getElementById('rememberKeys').checked;
     const saved = {};
     for (const [name, cfg] of Object.entries(PROVIDERS)) {
@@ -634,9 +630,33 @@ function saveSettingsIfAllowed() {
             localStorage.removeItem(STORAGE_KEY);
         }
     } catch (e) {
-        // storage may be unavailable (private mode) — ignore silently
         console.warn('Could not persist settings:', e && e.message);
     }
+}
+
+// --- File Import (txt / md only) ---
+// Defined globally so inline onchange listeners can access it
+function handleImportFile(event, textareaId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'md'].includes(ext)) {
+        showBanner('analyzeBanner', 'Only .txt and .md files are supported.', 'warn');
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const ta = document.getElementById(textareaId);
+        ta.value = text;
+        updateCharCounts();
+    };
+    reader.readAsText(file);
+
+    event.target.value = '';
 }
 
 window.addEventListener('load', () => {
@@ -650,23 +670,20 @@ window.addEventListener('load', () => {
             el.placeholder = 'e.g. ' + cfg.defaultModel;
         }
     }
-    // default remember to false for safety
+    
     if (Object.keys(saved).length === 0) {
         document.getElementById('rememberKeys').checked = false;
     } else {
-        // if values came from localStorage, set checked; if from session, leave unchecked
         const fromLocal = !!localStorage.getItem(STORAGE_KEY);
         document.getElementById('rememberKeys').checked = fromLocal;
     }
 
     document.getElementById('providerSelect').addEventListener('change', updateProviderUI);
 
-    // register inputs to persist appropriately
     document.querySelectorAll('#openai-settings input, #anthropic-settings input, #google-settings input, #llamacpp-settings input')
         .forEach(el => el.addEventListener('input', saveSettingsIfAllowed));
     document.getElementById('rememberKeys').addEventListener('change', saveSettingsIfAllowed);
 
-    // char counters
     document.getElementById('cvInput').addEventListener('input', updateCharCounts);
     document.getElementById('jdInput').addEventListener('input', updateCharCounts);
     updateProviderUI();
@@ -697,7 +714,7 @@ function currentModel(provider) {
     return entered || cfg.defaultModel || '';
 }
 
-// --- Inline status banners (replaces alert()) ---
+// --- Inline status banners ---
 function showBanner(elementId, message, type) {
     const el = document.getElementById(elementId);
     el.textContent = message;
@@ -707,30 +724,6 @@ function clearBanner(elementId) {
     const el = document.getElementById(elementId);
     el.className = 'banner';
     el.textContent = '';
-}
-
-// --- File Import (txt / md only) ---
-function handleImportFile(event, textareaId) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'md'].includes(ext)) {
-        showBanner('analyzeBanner', 'Only .txt and .md files are supported.', 'warn');
-        event.target.value = ''; // reset so the same file can be retried
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target.result;
-        const ta = document.getElementById(textareaId);
-        ta.value = text; // replace existing content with the imported file
-        updateCharCounts();
-    };
-    reader.readAsText(file);
-
-    event.target.value = ''; // allow re-importing the same file
 }
 
 // --- Helpers: robust fetch + JSON extraction ---
@@ -750,32 +743,26 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = 30000) {
 
 function extractFirstJson(text) {
     if (!text || typeof text !== 'string') throw new Error('No text to parse');
-    // Try direct parse
     try { return JSON.parse(text); } catch (e) {}
 
-    // Remove common fences
     let cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
-    // Find first {...} or [...]
     const objMatch = cleaned.match(/\{[\s\S]*\}/);
     const arrMatch = cleaned.match(/\[[\s\S]*\]/);
     const candidate = objMatch ? objMatch[0] : (arrMatch ? arrMatch[0] : null);
     if (!candidate) throw new Error('No JSON object/array found in model output');
 
-    // Remove trailing commas before } or ] which often break JSON
     const safe = candidate.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
     return JSON.parse(safe);
 }
 
 // --- Core Logic: LLM API Calls ---
-// mode: "analysis" (score + pros/cons) or "documents" (tailored CV + cover letter)
 async function callLLM(provider, apiKey, mode) {
     const cfg = PROVIDERS[provider];
     const model = currentModel(provider);
     const cvText = document.getElementById('cvInput').value;
     const jdText = document.getElementById('jdInput').value;
 
-    // System Prompts — "analysis" scores the fit, "documents" writes the CV + letter.
     const sharedConstraints = `
 1. Style Preservation: You MUST mimic the writing style of the original CV provided below.
    - If the CV uses bullet points, use them in the output.
@@ -783,7 +770,7 @@ async function callLLM(provider, apiKey, mode) {
    - Do NOT change the candidate's name or contact info if present.
    - Match the language in the JD.
    - Keep the CV to a maximum of 60 lines, considering 70 chars per line.
-2. JSON Output: You MUST return a valid JSON object with no markdown formatting (no ```json).
+2. JSON Output: You MUST return a valid JSON object with no markdown formatting (no \`\`\`json).
 `;
     const inputBlock = `\nInput Data:\nCV: ${cvText}\nJD: ${jdText}\n`;
 
@@ -843,25 +830,22 @@ Return ONLY the JSON object.
 
     if (!response.ok) {
         let detail = '';
-        try { const bodyJson = await response.json(); detail = bodyJson?.error?.message || JSON.stringify(bodyJson).slice(0, 400); } catch { /* body wasn't JSON */ }
+        try { const bodyJson = await response.json(); detail = bodyJson?.error?.message || JSON.stringify(bodyJson).slice(0, 400); } catch {}
         throw new Error(`API error: ${response.status}${detail ? ' — ' + detail : ''}`);
     }
 
     const data = await response.json();
     let resultText = cfg.extractText(data) || '';
 
-    // Some providers return structured content directly; if resultText is object, handle
     if (typeof resultText !== 'string') {
-        try { return resultText; } catch (e) { /* fallthrough */ }
+        try { return resultText; } catch (e) {}
     }
 
-    // Clean potential markdown code fences from LLM output
     resultText = resultText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     try {
         return extractFirstJson(resultText);
     } catch (parseErr) {
-        // expose raw output in debug area (text only) to help diagnostics
         const debug = document.getElementById('debugOutput');
         const debugPre = document.getElementById('debugPre');
         if (debug && debugPre) {
@@ -891,9 +875,6 @@ function requireInputs(bannerId) {
     return { provider, apiKey };
 }
 
-// Build a table row without innerHTML — result text comes from the LLM and must
-// never be parsed as HTML (an untrusted JD/CV could otherwise inject markup via
-// a prompt-injection response).
 function addMatchRow(tbody, iconClass, iconText, text) {
     const tr = document.createElement('tr');
     const iconTd = document.createElement('td');
@@ -912,7 +893,6 @@ async function runAnalysis() {
     const creds = requireInputs('analyzeBanner');
     if (!creds) return;
 
-    // UI Updates
     document.getElementById('loader').style.display = 'flex';
     document.getElementById('loaderText').textContent = 'Analyzing match…';
     document.getElementById('analyzeBtn').disabled = true;
@@ -925,7 +905,6 @@ async function runAnalysis() {
     try {
         const result = await callLLM(creds.provider, creds.apiKey, 'analysis');
 
-        // Update Score
         const score = Number(result.match_score) || 0;
         const tone = score > 0.7 ? 'pine' : score > 0.4 ? 'gold' : 'brick';
         const tierText = score > 0.7 ? 'Strong fit' : score > 0.4 ? 'Partial fit' : 'Weak fit';
@@ -936,7 +915,6 @@ async function runAnalysis() {
         document.getElementById('tierLabel').textContent = tierText;
         document.getElementById('tierLabel').className = 'tier ' + tone;
 
-        // Update Table — build off-DOM, then attach once to avoid a reflow per row
         const tbody = document.getElementById('matchTableBody');
         const fragmentBody = document.createElement('tbody');
         fragmentBody.id = 'matchTableBody';
@@ -944,7 +922,6 @@ async function runAnalysis() {
         (result.cons || []).forEach(con => addMatchRow(fragmentBody, 'con', '✕', con));
         tbody.replaceWith(fragmentBody);
 
-        // Analysis done — offer the next step
         hasAnalysis = true;
 
     } catch (error) {
@@ -966,7 +943,6 @@ async function runGeneration() {
     const creds = requireInputs('generateBanner');
     if (!creds) return;
 
-    // UI Updates
     document.getElementById('loader').style.display = 'flex';
     document.getElementById('loaderText').textContent = 'Generating documents…';
     document.getElementById('analyzeBtn').disabled = true;
@@ -975,7 +951,6 @@ async function runGeneration() {
     try {
         const result = await callLLM(creds.provider, creds.apiKey, 'documents');
 
-        // Update Outputs
         const cvOut = document.getElementById('cvOutput');
         const letterOut = document.getElementById('letterOutput');
         cvOut.textContent = result.tailored_cv || result.tailoredCV || '';
@@ -1022,7 +997,6 @@ function updateCharCounts() {
         clearBanner('analyzeBanner');
     }
 }
-
 </script>
 </body>
 </html>
