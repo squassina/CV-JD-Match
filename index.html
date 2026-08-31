@@ -252,13 +252,14 @@
         }
         .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
 
+        /* Height set to ~20 lines (1.55 line-height * 0.83rem font-size * 20 lines + padding) */
         .result-box {
             background: var(--paper);
             border: 1px solid var(--line);
             border-radius: 4px;
             padding: 16px;
             margin-top: 4px;
-            max-height: 420px;
+            height: 420px;
             overflow-y: auto;
             white-space: pre-wrap;
             font-family: var(--font-mono);
@@ -559,8 +560,8 @@
         <div class="banner" id="generateBanner" role="status" aria-live="polite"></div>
     </div>
 
-    <!-- Section 3 & 4: Generated docs -->
-    <div class="card">
+    <!-- Section 3 & 4: Generated docs (Stacked full width for readability) -->
+    <div class="card span-2">
         <div class="section-heading">
             <span class="num">03</span>
             <h2>Tailored CV</h2>
@@ -571,7 +572,7 @@
         <button class="copy-btn" onclick="toggleMarkdownPreview('cvOutput', this)">Show Raw</button>
     </div>
 
-    <div class="card">
+    <div class="card span-2">
         <div class="section-heading">
             <span class="num">04</span>
             <h2>Cover Letter</h2>
