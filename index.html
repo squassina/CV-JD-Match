@@ -14,6 +14,9 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 
+    <!-- Marked.js for rendering markdown output -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+
     <style>
         :root {
             --paper: #f6f4ee;
@@ -263,6 +266,19 @@
             line-height: 1.55;
             color: var(--ink);
         }
+        .result-box.preview {
+            white-space: normal;
+            font-family: var(--font-body);
+            line-height: 1.6;
+        }
+        .result-box.preview h1, .result-box.preview h2, .result-box.preview h3 {
+            font-family: var(--font-display);
+            margin-top: 1em;
+            margin-bottom: 0.4em;
+        }
+        .result-box.preview ul, .result-box.preview ol {
+            padding-left: 20px;
+        }
         .result-box.empty { color: var(--ink-faint); font-style: italic; font-family: var(--font-body); }
 
         /* --- Score seal --- */
@@ -484,6 +500,12 @@
                 </div>
             </div>
 
+            <!-- Custom Instructions Field -->
+            <div class="input-group" style="margin-top:14px; margin-bottom:12px;">
+                <label for="customInstructions">Special instructions <span style="font-weight:400; color:var(--ink-faint);">(optional)</span></label>
+                <input type="text" id="customInstructions" placeholder="e.g. Limit CV to 1 page, adopt an executive tone, prioritize leadership skills">
+            </div>
+
             <div style="display:flex; align-items:center; gap:16px; margin-top:10px;">
                 <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-bottom:0;">
                     <input type="checkbox" id="rememberKeys" style="width:auto;">
@@ -543,9 +565,10 @@
             <span class="num">03</span>
             <h2>Tailored CV</h2>
         </div>
-        <div class="result-box empty" id="cvOutput" role="region" aria-label="Tailored CV">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <div class="result-box empty preview" id="cvOutput" role="region" aria-label="Tailored CV">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
         <button class="copy-btn" onclick="copyToClipboard('cvOutput', this)">Copy text</button>
         <button class="copy-btn" onclick="downloadFile('cvOutput', 'Tailored_CV.md')">Download .md</button>
+        <button class="copy-btn" onclick="toggleMarkdownPreview('cvOutput', this)">Show Raw</button>
     </div>
 
     <div class="card">
@@ -553,9 +576,10 @@
             <span class="num">04</span>
             <h2>Cover Letter</h2>
         </div>
-        <div class="result-box empty" id="letterOutput" role="region" aria-label="Cover letter">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <div class="result-box empty preview" id="letterOutput" role="region" aria-label="Cover letter">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
         <button class="copy-btn" onclick="copyToClipboard('letterOutput', this)">Copy text</button>
         <button class="copy-btn" onclick="downloadFile('letterOutput', 'Cover_Letter.md')">Download .md</button>
+        <button class="copy-btn" onclick="toggleMarkdownPreview('letterOutput', this)">Show Raw</button>
     </div>
 </div>
 </main>
@@ -563,6 +587,12 @@
 <footer class="note">This tool runs entirely in your browser. If using a local llama.cpp server, ensure it is running and CORS-enabled.</footer>
 
 <script>
+// Internal state store for raw markdown content
+const documentRawState = {
+    cvOutput: '',
+    letterOutput: ''
+};
+
 // --- Provider configuration (single source of truth — add a provider here only) ---
 const PROVIDERS = {
     openai: {
@@ -659,7 +689,6 @@ function clearSavedKeys() {
     sessionStorage.removeItem(STORAGE_KEY);
     document.getElementById('rememberKeys').checked = false;
 
-    // Clear the input fields dynamically
     for (const cfg of Object.values(PROVIDERS)) {
         if (cfg.keyId) {
             const input = document.getElementById(cfg.keyId);
@@ -677,7 +706,6 @@ async function readTextOrPdf(file) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-        // Fetch all pages in parallel
         const pagePromises = [];
         for (let i = 1; i <= pdf.numPages; i++) {
             pagePromises.push(
@@ -713,7 +741,7 @@ function handleImportFile(event, textareaId) {
     const file = event.target.files[0];
     if (!file) return;
     processFile(file, textareaId);
-    event.target.value = ''; // allow re-importing the same file
+    event.target.value = '';
 }
 
 // --- Drag and Drop Setup ---
@@ -772,7 +800,6 @@ window.addEventListener('load', () => {
     document.getElementById('cvInput').addEventListener('input', updateCharCounts);
     document.getElementById('jdInput').addEventListener('input', updateCharCounts);
 
-    // Register drag and drop handlers
     setupDragAndDrop('cvInput');
     setupDragAndDrop('jdInput');
 
@@ -852,6 +879,7 @@ async function callLLM(provider, apiKey, mode) {
     const model = currentModel(provider);
     const cvText = document.getElementById('cvInput').value;
     const jdText = document.getElementById('jdInput').value;
+    const customInstructions = document.getElementById('customInstructions').value.trim();
 
     const sharedConstraints = `
 1. Style Preservation: You MUST mimic the writing style of the original CV provided below.
@@ -861,7 +889,8 @@ async function callLLM(provider, apiKey, mode) {
    - Match the language in the JD.
    - Keep the CV to a maximum of 60 lines, considering 70 chars per line.
 2. JSON Output: You MUST return a valid JSON object with no markdown formatting (no \`\`\`json).
-`;
+${customInstructions ? `3. Special Instructions: ${customInstructions}\n` : ''}`;
+
     const inputBlock = `\nInput Data:\nCV: ${cvText}\nJD: ${jdText}\n`;
 
     let systemPrompt;
@@ -872,7 +901,7 @@ Your task is to analyze a CV against a Job Description (JD).
 
 CRITICAL CONSTRAINTS:
 ${sharedConstraints}
-3. Analysis Logic:
+Analysis Logic:
    - "match_score": A float between 0.0 and 1.0 representing the fit.
    - "pros": Array of strings listing skills/attributes present in BOTH CV and JD.
    - "cons": Array of strings listing critical skills in JD missing from CV.
@@ -887,7 +916,7 @@ Your task is to tailor the CV to the Job Description (JD) and write a matching c
 
 CRITICAL CONSTRAINTS:
 ${sharedConstraints}
-3. Documents:
+Documents:
    - "tailored_cv": The full text of a tailored CV. Reorder sections to highlight matched skills. Keep original style.
    - "presentation_letter": A cover letter tailored to the JD, written in the exact same voice/style as the original CV.
 
@@ -1043,10 +1072,17 @@ async function runGeneration() {
 
         const cvOut = document.getElementById('cvOutput');
         const letterOut = document.getElementById('letterOutput');
-        cvOut.textContent = result.tailored_cv || result.tailoredCV || '';
+
+        documentRawState.cvOutput = result.tailored_cv || result.tailoredCV || '';
+        documentRawState.letterOutput = result.presentation_letter || result.presentationLetter || '';
+
+        cvOut.innerHTML = marked.parse(documentRawState.cvOutput);
         cvOut.classList.remove('empty');
-        letterOut.textContent = result.presentation_letter || result.presentationLetter || '';
+        cvOut.classList.add('preview');
+
+        letterOut.innerHTML = marked.parse(documentRawState.letterOutput);
         letterOut.classList.remove('empty');
+        letterOut.classList.add('preview');
 
     } catch (error) {
         console.error(error);
@@ -1059,10 +1095,10 @@ async function runGeneration() {
 }
 
 function copyToClipboard(elementId, btn) {
-    const el = document.getElementById(elementId);
-    if (el.classList.contains('empty')) return;
+    const rawText = documentRawState[elementId];
+    if (!rawText) return;
 
-    navigator.clipboard.writeText(el.textContent).then(() => {
+    navigator.clipboard.writeText(rawText).then(() => {
         const original = btn.textContent;
         btn.textContent = 'Copied';
         btn.disabled = true;
@@ -1075,10 +1111,10 @@ function copyToClipboard(elementId, btn) {
 }
 
 function downloadFile(elementId, filename) {
-    const el = document.getElementById(elementId);
-    if (el.classList.contains('empty')) return;
+    const rawText = documentRawState[elementId];
+    if (!rawText) return;
 
-    const blob = new Blob([el.textContent], { type: 'text/markdown' });
+    const blob = new Blob([rawText], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1087,6 +1123,22 @@ function downloadFile(elementId, filename) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function toggleMarkdownPreview(elementId, btn) {
+    const el = document.getElementById(elementId);
+    const rawText = documentRawState[elementId];
+    if (!rawText) return;
+
+    if (el.classList.contains('preview')) {
+        el.textContent = rawText;
+        el.classList.remove('preview');
+        btn.textContent = 'Show Preview';
+    } else {
+        el.innerHTML = marked.parse(rawText);
+        el.classList.add('preview');
+        btn.textContent = 'Show Raw';
+    }
 }
 
 // --- Character count & token hints ---
