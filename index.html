@@ -8,14 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- PDF.js library for client-side PDF text extraction -->
+    <!-- PDF.js library for client-side PDF manipulation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
-
     <!-- Marked.js for rendering markdown output -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+
+    <!-- html2pdf.js for client-side PDF rendering from HTML/Markdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
@@ -252,7 +257,6 @@
         }
         .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
 
-        /* Height set to ~20 lines (1.55 line-height * 0.83rem font-size * 20 lines + padding) */
         .result-box {
             background: var(--paper);
             border: 1px solid var(--line);
@@ -560,7 +564,7 @@
         <div class="banner" id="generateBanner" role="status" aria-live="polite"></div>
     </div>
 
-    <!-- Section 3 & 4: Generated docs (Stacked full width for readability) -->
+    <!-- Section 3 & 4: Generated docs -->
     <div class="card span-2">
         <div class="section-heading">
             <span class="num">03</span>
@@ -569,6 +573,7 @@
         <div class="result-box empty preview" id="cvOutput" role="region" aria-label="Tailored CV">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
         <button class="copy-btn" onclick="copyToClipboard('cvOutput', this)">Copy text</button>
         <button class="copy-btn" onclick="downloadFile('cvOutput', 'Tailored_CV.md')">Download .md</button>
+        <button class="copy-btn" onclick="downloadCvPdf()">Download .pdf</button>
         <button class="copy-btn" onclick="toggleMarkdownPreview('cvOutput', this)">Show Raw</button>
     </div>
 
@@ -1124,6 +1129,69 @@ function downloadFile(elementId, filename) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+async function downloadCvPdf() {
+    const rawText = documentRawState.cvOutput;
+    if (!rawText) return;
+
+    if (typeof marked === 'undefined' || typeof window.jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+        console.error('[CV PDF] Required libraries not loaded');
+        alert('PDF export failed: a required library is missing.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+
+    const RESOLUTION_FACTOR = 1; // bump to 1.5 or 2 for sharper text, keep at 1 if current sizing is correct
+    const PX_WIDTH = 800 * RESOLUTION_FACTOR;
+    const MM_WIDTH = 186;
+    const BASE_FONT_PX = 16 * RESOLUTION_FACTOR; // scales with PX_WIDTH, so physical size stays constant
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, div { font-family: Georgia, serif; font-size: ${BASE_FONT_PX}px; line-height: 1.6; color: #000; }
+        h1, h2, h3 { margin: 0.4em 0 0.2em; font-weight: bold; page-break-after: avoid; break-after: avoid; }
+        p, ul, ol { margin: 0 0 0.6em 0; page-break-inside: avoid; break-inside: avoid; }
+        li { margin-left: 1.2em; page-break-inside: avoid; break-inside: avoid; }
+        strong { font-weight: bold; }
+        em { font-style: italic; }
+        a { color: #000; text-decoration: underline; }
+      </style>
+      ${marked.parse(rawText)}
+    `;
+    container.style.width = PX_WIDTH + 'px';
+    container.style.backgroundColor = '#ffffff';
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.zIndex = '-1';
+
+    document.body.appendChild(container);
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    try {
+        await new Promise((resolve, reject) => {
+            doc.html(container, {
+                margin: [12, 12, 12, 12],
+                autoPaging: 'text',
+                width: MM_WIDTH,
+                windowWidth: PX_WIDTH,
+                html2canvas: { useCORS: true, logging: false }, // no manual scale override
+                callback: () => resolve(),
+            });
+        });
+
+        doc.save('Tailored_CV.pdf');
+    } catch (err) {
+        console.error('[CV PDF] PDF generation error:', err);
+        alert('PDF export failed: ' + err.message);
+    } finally {
+        document.body.removeChild(container);
+    }
 }
 
 function toggleMarkdownPreview(elementId, btn) {
