@@ -892,8 +892,9 @@ async function callLLM(provider, apiKey, mode) {
    - If the CV uses bullet points, use them in the output.
    - If the tone is formal/technical, keep it formal/technical.
    - Do NOT change the candidate's name or contact info if present.
-   - Match the language in the JD.
+   - Match the language/idiom in the JD.
    - Keep the CV to a maximum of 60 lines, considering 70 chars per line.
+   - Generate the output text in Markdown.
 2. JSON Output: You MUST return a valid JSON object with no markdown formatting (no \`\`\`json).
 ${customInstructions ? `3. Special Instructions: ${customInstructions}\n` : ''}`;
 
