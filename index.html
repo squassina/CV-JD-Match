@@ -10,7 +10,6 @@
 
     <!-- PDF.js library for client-side PDF manipulation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
@@ -18,9 +17,6 @@
     </script>
     <!-- Marked.js for rendering markdown output -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
-
-    <!-- html2pdf.js for client-side PDF rendering from HTML/Markdown -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         :root {
@@ -94,12 +90,8 @@
             max-width: 1180px;
             margin: 32px auto 0;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 24px;
-        }
-
-        @media (max-width: 768px) {
-            .container { grid-template-columns: 1fr; }
         }
 
         .card {
@@ -108,11 +100,6 @@
             border-radius: 6px;
             box-shadow: 0 1px 2px rgba(28, 36, 48, 0.04);
             padding: 28px;
-        }
-
-        .card.span-2 { grid-column: span 2; }
-        @media (max-width: 768px) {
-            .card.span-2 { grid-column: span 1; }
         }
 
         .section-heading {
@@ -428,7 +415,7 @@
 
 <div class="container">
     <!-- Section 1: Input -->
-    <div class="card span-2">
+    <div class="card">
         <div class="section-heading">
             <span class="num">01</span>
             <h2>Source Documents</h2>
@@ -531,7 +518,7 @@
     </div>
 
     <!-- Section 2: Analysis -->
-    <div class="card span-2">
+    <div class="card">
         <div class="section-heading">
             <span class="num">02</span>
             <h2>Match Assessment</h2>
@@ -565,7 +552,7 @@
     </div>
 
     <!-- Section 3 & 4: Generated docs -->
-    <div class="card span-2">
+    <div class="card">
         <div class="section-heading">
             <span class="num">03</span>
             <h2>Tailored CV</h2>
@@ -577,7 +564,7 @@
         <button class="copy-btn" onclick="toggleMarkdownPreview('cvOutput', this)">Show Raw</button>
     </div>
 
-    <div class="card span-2">
+    <div class="card">
         <div class="section-heading">
             <span class="num">04</span>
             <h2>Cover Letter</h2>
@@ -767,14 +754,11 @@ function setupDragAndDrop(textareaId) {
             e.preventDefault();
             e.stopPropagation();
             ta.classList.remove('drag-over');
+            if (eventName === 'drop') {
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) processFile(files[0], textareaId);
+            }
         });
-    });
-
-    ta.addEventListener('drop', (e) => {
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            processFile(files[0], textareaId);
-        }
     });
 }
 
@@ -822,21 +806,6 @@ function updateProviderUI() {
     }
 }
 
-function currentProvider() {
-    return document.getElementById('providerSelect').value;
-}
-
-function currentApiKey(provider) {
-    const cfg = PROVIDERS[provider];
-    return cfg.keyId ? document.getElementById(cfg.keyId).value.trim() : '';
-}
-
-function currentModel(provider) {
-    const cfg = PROVIDERS[provider];
-    const entered = cfg.modelId ? document.getElementById(cfg.modelId).value.trim() : '';
-    return entered || cfg.defaultModel || '';
-}
-
 // --- Inline status banners ---
 function showBanner(elementId, message, type) {
     const el = document.getElementById(elementId);
@@ -850,9 +819,9 @@ function clearBanner(elementId) {
 }
 
 // --- Helpers: robust fetch + JSON extraction ---
-async function fetchWithTimeout(url, opts = {}, timeoutMs = 30000) {
+async function fetchWithTimeout(url, opts = {}) {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
+    const id = setTimeout(() => controller.abort(), 30000);
     try {
         const res = await fetch(url, { ...opts, signal: controller.signal });
         clearTimeout(id);
@@ -871,8 +840,7 @@ function extractFirstJson(text) {
     let cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
     const objMatch = cleaned.match(/\{[\s\S]*\}/);
-    const arrMatch = cleaned.match(/\[[\s\S]*\]/);
-    const candidate = objMatch ? objMatch[0] : (arrMatch ? arrMatch[0] : null);
+    const candidate = objMatch ? objMatch[0] : null;
     if (!candidate) throw new Error('No JSON object/array found in model output');
 
     const safe = candidate.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
@@ -882,7 +850,8 @@ function extractFirstJson(text) {
 // --- Core Logic: LLM API Calls ---
 async function callLLM(provider, apiKey, mode) {
     const cfg = PROVIDERS[provider];
-    const model = currentModel(provider);
+    const enteredModel = cfg.modelId ? document.getElementById(cfg.modelId).value.trim() : '';
+    const model = enteredModel || cfg.defaultModel || '';
     const cvText = document.getElementById('cvInput').value;
     const jdText = document.getElementById('jdInput').value;
     const customInstructions = document.getElementById('customInstructions').value.trim();
@@ -942,7 +911,7 @@ Return ONLY the JSON object.
             method: 'POST',
             headers: headers,
             body: JSON.stringify(body)
-        }, 30000);
+        });
     } catch (netErr) {
         if (provider === 'llamacpp') {
             throw new Error(
@@ -963,9 +932,7 @@ Return ONLY the JSON object.
     const data = await response.json();
     let resultText = cfg.extractText(data) || '';
 
-    if (typeof resultText !== 'string') {
-        try { return resultText; } catch (e) {}
-    }
+    if (typeof resultText !== 'string') return resultText;
 
     resultText = resultText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
@@ -992,9 +959,10 @@ function requireInputs(bannerId) {
         return null;
     }
 
-    const provider = currentProvider();
-    const apiKey = currentApiKey(provider);
-    if (PROVIDERS[provider].needsKey !== false && !apiKey) {
+    const provider = document.getElementById('providerSelect').value;
+    const providerCfg = PROVIDERS[provider];
+    const apiKey = providerCfg.keyId ? document.getElementById(providerCfg.keyId).value.trim() : '';
+    if (providerCfg.needsKey !== false && !apiKey) {
         showBanner(bannerId, 'Enter an API key for the selected provider before continuing.', 'warn');
         return null;
     }
