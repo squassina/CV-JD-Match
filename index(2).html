@@ -173,8 +173,7 @@
             background-color: var(--pine-tint);
         }
 
-        textarea:focus, select:focus, input:focus, button:focus-visible,
-        .result-box[contenteditable="true"]:focus {
+        textarea:focus, select:focus, input:focus, button:focus-visible {
             outline: 2px solid var(--pine);
             outline-offset: 1px;
         }
@@ -273,7 +272,25 @@
             padding-left: 20px;
         }
         .result-box.empty { color: var(--ink-faint); font-style: italic; font-family: var(--font-body); }
-        .result-box[contenteditable="true"] { cursor: text; }
+        .result-box[contenteditable="true"] {
+            cursor: text;
+        }
+        .result-box[contenteditable="true"]:hover {
+            border-color: var(--line-strong);
+        }
+        .result-box[contenteditable="true"]:focus {
+            outline: 2px solid var(--pine);
+            outline-offset: -1px;
+            background: #fffefb;
+        }
+        .edit-hint {
+            display: none;
+            font-size: 0.72rem;
+            color: var(--ink-faint);
+            margin: 6px 0 0;
+            font-style: italic;
+        }
+        .edit-hint.show { display: block; }
 
         /* --- Score seal --- */
         .seal-wrap {
@@ -559,8 +576,8 @@
             <span class="num">03</span>
             <h2>Tailored CV</h2>
         </div>
-        <div class="result-box empty preview" id="cvOutput" role="region" aria-label="Tailored CV" contenteditable="true">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
-        <p class="hint">Click in the box to edit the text before copying or downloading. Raw mode keeps the Markdown.</p>
+        <div class="result-box empty preview" id="cvOutput" role="region" aria-label="Tailored CV" contenteditable="false">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <p class="edit-hint" id="cvOutputHint">Editable — click into the text above to adjust it before exporting.</p>
         <button class="copy-btn" onclick="copyToClipboard('cvOutput', this)">Copy text</button>
         <button class="copy-btn" onclick="downloadFile('cvOutput', 'Tailored_CV.md')">Download .md</button>
         <button class="copy-btn" onclick="downloadCvPdf()">Download .pdf</button>
@@ -572,8 +589,8 @@
             <span class="num">04</span>
             <h2>Cover Letter</h2>
         </div>
-        <div class="result-box empty preview" id="letterOutput" role="region" aria-label="Cover letter" contenteditable="true">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
-        <p class="hint">Click in the box to edit the text before copying or downloading. Raw mode keeps the Markdown.</p>
+        <div class="result-box empty preview" id="letterOutput" role="region" aria-label="Cover letter" contenteditable="false">Not yet generated. Run the match assessment first, then continue to generate this document.</div>
+        <p class="edit-hint" id="letterOutputHint">Editable — click into the text above to adjust it before exporting.</p>
         <button class="copy-btn" onclick="copyToClipboard('letterOutput', this)">Copy text</button>
         <button class="copy-btn" onclick="downloadFile('letterOutput', 'Cover_Letter.md')">Download .md</button>
         <button class="copy-btn" onclick="toggleMarkdownPreview('letterOutput', this)">Show Raw</button>
@@ -589,16 +606,6 @@ const documentRawState = {
     cvOutput: '',
     letterOutput: ''
 };
-
-// Editable output boxes: keep the raw state in sync as the user types.
-// Preview mode exports plain text; Raw mode preserves the Markdown.
-['cvOutput', 'letterOutput'].forEach(id => {
-    const el = document.getElementById(id);
-    el.addEventListener('input', () => {
-        if (!documentRawState[id]) return;
-        documentRawState[id] = el.classList.contains('preview') ? el.innerText : el.textContent;
-    });
-});
 
 // --- Provider configuration (single source of truth — add a provider here only) ---
 const PROVIDERS = {
@@ -1068,10 +1075,14 @@ async function runGeneration() {
         cvOut.innerHTML = marked.parse(documentRawState.cvOutput);
         cvOut.classList.remove('empty');
         cvOut.classList.add('preview');
+        cvOut.setAttribute('contenteditable', 'true');
+        document.getElementById('cvOutputHint').classList.add('show');
 
         letterOut.innerHTML = marked.parse(documentRawState.letterOutput);
         letterOut.classList.remove('empty');
         letterOut.classList.add('preview');
+        letterOut.setAttribute('contenteditable', 'true');
+        document.getElementById('letterOutputHint').classList.add('show');
 
     } catch (error) {
         console.error(error);
@@ -1083,7 +1094,31 @@ async function runGeneration() {
     }
 }
 
+// --- Keep documentRawState in sync with manual edits made in the output boxes ---
+function syncRawState(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (el.classList.contains('empty')) return; // nothing generated yet, ignore placeholder text
+    if (el.classList.contains('preview')) {
+        // Rendered markdown view: best-effort plain-text capture of user edits.
+        documentRawState[elementId] = el.innerText.replace(/\n{3,}/g, '\n\n').trim();
+    } else {
+        // Raw markdown view: textContent already matches the underlying source.
+        documentRawState[elementId] = el.textContent;
+    }
+}
+
+function setupEditableSync(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.addEventListener('input', () => syncRawState(elementId));
+    el.addEventListener('blur', () => syncRawState(elementId));
+}
+setupEditableSync('cvOutput');
+setupEditableSync('letterOutput');
+
 function copyToClipboard(elementId, btn) {
+    syncRawState(elementId);
     const rawText = documentRawState[elementId];
     if (!rawText) return;
 
@@ -1100,6 +1135,7 @@ function copyToClipboard(elementId, btn) {
 }
 
 function downloadFile(elementId, filename) {
+    syncRawState(elementId);
     const rawText = documentRawState[elementId];
     if (!rawText) return;
 
@@ -1115,6 +1151,7 @@ function downloadFile(elementId, filename) {
 }
 
 async function downloadCvPdf() {
+    syncRawState('cvOutput');
     const rawText = documentRawState.cvOutput;
     if (!rawText) return;
 
@@ -1131,9 +1168,6 @@ async function downloadCvPdf() {
     const MM_WIDTH = 186;
     const BASE_FONT_PX = 16 * RESOLUTION_FACTOR; // scales with PX_WIDTH, so physical size stays constant
 
-    const cvOut = document.getElementById('cvOutput');
-    const bodyHtml = cvOut.classList.contains('preview') ? cvOut.innerHTML : marked.parse(rawText);
-
     const container = document.createElement('div');
     container.innerHTML = `
       <style>
@@ -1146,7 +1180,7 @@ async function downloadCvPdf() {
         em { font-style: italic; }
         a { color: #000; text-decoration: underline; }
       </style>
-      ${bodyHtml}
+      ${marked.parse(rawText)}
     `;
     container.style.width = PX_WIDTH + 'px';
     container.style.backgroundColor = '#ffffff';
@@ -1182,6 +1216,8 @@ async function downloadCvPdf() {
 
 function toggleMarkdownPreview(elementId, btn) {
     const el = document.getElementById(elementId);
+    // Capture whatever the user has typed in the current view before switching.
+    syncRawState(elementId);
     const rawText = documentRawState[elementId];
     if (!rawText) return;
 
